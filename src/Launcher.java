@@ -3,25 +3,29 @@ import java.util.TimerTask;
 
 public class Launcher {
 
-	private static final int DELAY = 3_000;
-
 	public static void main(String[] args) {
-		TimerTask task = getTask(() -> printApplication("second"));
-		new Timer().schedule(task, DELAY);
+		int delay = 3_000;
+		runLater(() -> printActiveApplication("second run"), delay);
 
-		printApplication("first");
+		printActiveApplication("first run");
 	}
 
-	private static TimerTask getTask(final Runnable runnable) {
+	private static void printActiveApplication(String textBefore) {
+		System.out.println(textBefore + " " + new Processes().getOpenedApplicationNames());
+	}
+
+	private static void runLater(final Runnable runnable, int delay) {
+		Timer timer = new Timer();
+		timer.schedule(getRunnableTask(runnable), delay);
+		timer.schedule(getRunnableTask(() -> timer.cancel()), delay*2);
+	}
+
+	private static TimerTask getRunnableTask(final Runnable runnable) {
 		return new TimerTask() {
 			@Override
 			public void run() {
 				runnable.run();
 			}
 		};
-	}
-
-	private static void printApplication(String textBefore) {
-		System.out.println(textBefore +"\n" + new Processes().getOpenedApplicationNames());
 	}
 }

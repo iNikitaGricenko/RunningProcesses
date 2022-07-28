@@ -1,3 +1,5 @@
+import lombok.SneakyThrows;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -6,22 +8,17 @@ import static java.lang.String.format;
 
 public class Processes {
 
+	@SneakyThrows
 	public Application getOpenedApplicationNames() {
-		try {
-			String systemOS = System.getProperty("os.name");
+		String systemOS = System.getProperty("os.name");
 
-			if ("Linux".equals(systemOS)) {
-				return linuxRunningProcesses();
-			}
-			throw new RuntimeException(format("OS %s is unsupported", systemOS));
-		} catch (IOException e) {
-			throw new RuntimeException(e);
+		if ("Linux".equals(systemOS)) {
+			return linuxRunningProcesses();
 		}
+		throw new RuntimeException(format("OS %s is unsupported", systemOS));
 	}
 
 	private Application linuxRunningProcesses() throws IOException {
-//		timeSkip();
-
 		String xid = getXid();
 		String name = getApplicationName(xid);
 		String title = getApplicationTitle(xid);
@@ -48,13 +45,8 @@ public class Processes {
 	}
 
 	private BufferedReader getBufferedReader(String command) throws IOException {
-		Process process;
-		process = Runtime.getRuntime().exec(command);
+		Process process = Runtime.getRuntime().exec(command);
 		return new BufferedReader(
 				new InputStreamReader(process.getInputStream()));
-	}
-
-	private static void timeSkip() {
-		for (double i = 0; i < 1_999_999_999d; i++) {}
 	}
 }
