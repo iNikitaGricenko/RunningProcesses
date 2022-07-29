@@ -34,6 +34,21 @@ public class Processes {
 		final String script="tell application \"System Events\"\n" +
 				"\tname of application processes whose frontmost is tru\n" +
 				"end";
+
+//		"global frontApp, frontAppName, windowTitle\n" +
+//		"\n" +
+//		"tell application \"System Events\"\n' +
+//		"\tset frontApp to first application process whose frontmost is true\n" +
+//		"\tset frontAppName to name of frontApp\n" +
+//		"\ttell process frontAppName\n" +
+//		"\t\ttell (1st window whose value of attribute \"AXMain\" is true)\n" +
+//		"\t\t\tset windowTitle to value of attribute \"AXTitle\"\n" +
+//		"\t\tend tell\n" +
+//		"\tend tell\n" +
+//		"end tell\n" +
+//		"\n" +
+// 		"return {frontAppName, windowTitle}"
+
 		ScriptEngine appleScript = new ScriptEngineManager().getEngineByName("AppleScript");
 		String result=(String)appleScript.eval(script);
 		System.out.println(result);
@@ -43,13 +58,14 @@ public class Processes {
 		String xid = getXid();
 		String name = getApplicationName(xid);
 		String title = getApplicationTitle(xid);
+		getAppIcon(xid);
 		return new Application(xid, name, title);
 	}
 
 	private Application getWindowsActiveWindowInfo() throws IOException {
 		getBufferedReader("get-process | ? { $_.mainwindowhandle -eq $a }").readLine();
 
-		//		https://stackoverflow.com/questions/1354254/get-current-active-windows-title-in-java
+		//	OR	https://stackoverflow.com/questions/1354254/get-current-active-windows-title-in-java
 
 		throw new RuntimeException("get Running Processes on windows is currently unsupported");
 	}
@@ -71,6 +87,12 @@ public class Processes {
 		return getBufferedReader(format("xprop -id %s _NET_WM_NAME", xid))
 				.readLine()
 				.split(" = ")[1];
+	}
+
+	private void getAppIcon(String xid) throws IOException {
+		getBufferedReader("/bin/bash -c 'xprop -id $(xprop -root _NET_ACTIVE_WINDOW | cut -d ' ' -f 5) WM_NAME | cut -d '\"' -f 2'")
+				.lines()
+				.forEach(System.out::println);
 	}
 
 	private BufferedReader getBufferedReader(String command) throws IOException {

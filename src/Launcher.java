@@ -7,7 +7,7 @@ public class Launcher {
 		int delay = 3_000;
 		runLater(() -> printActiveApplication("second run"), delay);
 
-		printActiveApplication("first run");
+//		printActiveApplication("first run");
 	}
 
 	private static void printActiveApplication(String textBefore) {
