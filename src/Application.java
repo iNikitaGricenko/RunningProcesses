@@ -1,45 +1,21 @@
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import java.util.Objects;
 
 import static java.lang.String.format;
 
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class Application {
 
 		private String xid;
 		private String name;
 		private String title;
-
-		public Application() {
-		}
-
-		public Application(String xid, String name, String title) {
-				this.xid = xid;
-				this.name = name;
-				this.title = title;
-		}
-
-		public String getXid() {
-				return xid;
-		}
-
-		public void setXid(String xid) {
-				this.xid = xid;
-		}
-
-		public String getName() {
-				return name;
-		}
-
-		public void setName(String name) {
-				this.name = name;
-		}
-
-		public String getTitle() {
-				return title;
-		}
-
-		public void setTitle(String title) {
-				this.title = title;
-		}
 
 		@Override
 		public String toString() {

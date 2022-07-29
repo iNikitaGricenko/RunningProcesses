@@ -1,8 +1,15 @@
+import com.sun.jna.Platform;
+import com.sun.security.auth.module.UnixSystem;
 import lombok.SneakyThrows;
 
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+
+
 
 import static java.lang.String.format;
 
@@ -14,8 +21,22 @@ public class Processes {
 
 		if ("Linux".equals(systemOS)) {
 			return linuxRunningProcesses();
+		} else if ("Windows".equals(systemOS)) {
+			return getWindowsActiveWindowInfo();
+		} else if ("Mac".equals(systemOS)) {
+			macOsRunningProcesses();
 		}
+
 		throw new RuntimeException(format("OS %s is unsupported", systemOS));
+	}
+
+	private static void macOsRunningProcesses() throws ScriptException {
+		final String script="tell application \"System Events\"\n" +
+				"\tname of application processes whose frontmost is tru\n" +
+				"end";
+		ScriptEngine appleScript = new ScriptEngineManager().getEngineByName("AppleScript");
+		String result=(String)appleScript.eval(script);
+		System.out.println(result);
 	}
 
 	private Application linuxRunningProcesses() throws IOException {
@@ -27,6 +48,9 @@ public class Processes {
 
 	private Application getWindowsActiveWindowInfo() throws IOException {
 		getBufferedReader("get-process | ? { $_.mainwindowhandle -eq $a }").readLine();
+
+		//		https://stackoverflow.com/questions/1354254/get-current-active-windows-title-in-java
+
 		throw new RuntimeException("get Running Processes on windows is currently unsupported");
 	}
 
