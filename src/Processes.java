@@ -25,6 +25,11 @@ public class Processes {
 		return new Application(xid, name, title);
 	}
 
+	private Application getWindowsActiveWindowInfo() throws IOException {
+		getBufferedReader("get-process | ? { $_.mainwindowhandle -eq $a }").readLine();
+		throw new RuntimeException("get Running Processes on windows is currently unsupported");
+	}
+
 	private String getXid() throws IOException {
 		return getBufferedReader("xprop -root _NET_ACTIVE_WINDOW")
 				.readLine()
