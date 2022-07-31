@@ -1,16 +1,21 @@
-import com.sun.jna.Platform;
-import com.sun.security.auth.module.UnixSystem;
+import com.sun.jna.Native;
+import com.sun.jna.Pointer;
+import com.sun.jna.platform.win32.*;
+import com.sun.jna.ptr.IntByReference;
+import com.sun.jna.ptr.PointerByReference;
 import lombok.SneakyThrows;
 
 import javax.script.ScriptEngine;
+import javax.script.ScriptEngineFactory;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
+import java.util.List;
+import java.util.Optional;
 
 
-
+import static com.sun.jna.platform.win32.WinDef.*;
+import static com.sun.jna.platform.win32.WinNT.*;
 import static java.lang.String.format;
 
 public class Processes {
@@ -21,7 +26,7 @@ public class Processes {
 
 		if ("Linux".equals(systemOS)) {
 			return linuxRunningProcesses();
-		} else if ("Windows".equals(systemOS)) {
+		} else if ("Windows 10".equals(systemOS)) {
 			return getWindowsActiveWindowInfo();
 		} else if ("Mac".equals(systemOS)) {
 			macOsRunningProcesses();
@@ -63,11 +68,34 @@ public class Processes {
 	}
 
 	private Application getWindowsActiveWindowInfo() throws IOException {
-		getBufferedReader("get-process | ? { $_.mainwindowhandle -eq $a }").readLine();
-
-		//	OR	https://stackoverflow.com/questions/1354254/get-current-active-windows-title-in-java
+		System.out.println(getWindowsAppPid()); // returns 12032 (just pid)
+		System.out.println(getWindowsAppProcess()); // returns app name in example C:\Program Files\JetBrains\IntelliJ IDEA Ultimate\bin\idea64.exe
+		System.out.println(getWindowsAppTitle()); // returns app title in example RunningProcesses – Processes.java
 
 		throw new RuntimeException("get Running Processes on windows is currently unsupported");
+	}
+
+	private String getWindowsAppPid() {
+		HWND hwnd = User32.INSTANCE.GetForegroundWindow();
+		int processId = User32.INSTANCE.GetWindowThreadProcessId(hwnd, new IntByReference());
+		return String.valueOf(processId);
+	}
+
+	private String getWindowsAppTitle() {
+		HWND hwnd = User32.INSTANCE.GetForegroundWindow();
+		char[] buffer = new char[1024 * 2];
+		User32.INSTANCE.GetWindowText(User32.INSTANCE.GetForegroundWindow(), buffer, 1024);
+
+		return Native.toString(buffer);
+	}
+
+	private String getWindowsAppProcess() {
+		char[] bufferTwo = new char[1024 * 2];
+		IntByReference pointer = new IntByReference();
+		User32.INSTANCE.GetWindowThreadProcessId(User32.INSTANCE.GetForegroundWindow(), pointer);
+		HANDLE process = Kernel32.INSTANCE.OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, false, pointer.getValue());
+		Psapi.INSTANCE.GetModuleFileNameExW(process, null, bufferTwo, 1024);
+		return Native.toString(bufferTwo);
 	}
 
 	private String getXid() throws IOException {
