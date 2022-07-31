@@ -68,11 +68,12 @@ public class Processes {
 	}
 
 	private Application getWindowsActiveWindowInfo() throws IOException {
-		System.out.println(getWindowsAppPid()); // returns 12032 (just pid)
-		System.out.println(getWindowsAppProcess()); // returns app name in example C:\Program Files\JetBrains\IntelliJ IDEA Ultimate\bin\idea64.exe
-		System.out.println(getWindowsAppTitle()); // returns app title in example RunningProcesses – Processes.java
+		String pid = getWindowsAppPid(); // returns 12032 (just pid)
+		String appProcess = getWindowsAppProcess(); // returns app name in example C:\Program Files\JetBrains\IntelliJ IDEA Ultimate\bin\idea64.exe
+		String appTitle = getWindowsAppTitle(); // returns app title in example RunningProcesses – Processes.java
 
-		throw new RuntimeException("get Running Processes on windows is currently unsupported");
+//		throw new RuntimeException("get Running Processes on windows is currently unsupported");
+		return new Application(pid, appProcess, appTitle);
 	}
 
 	private String getWindowsAppPid() {
