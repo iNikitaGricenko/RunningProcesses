@@ -13,15 +13,22 @@ import java.io.InputStreamReader;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import static com.sun.jna.platform.win32.WinDef.HWND;
 import static java.lang.String.format;
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.toList;
 
 public class Processes {
 
-	private static final int SIZE = 1024;
+	private static final int BUFFER_SIZE = 1024;
+
+	private static User32 getUser32() {
+		return User32.INSTANCE;
+	}
+
+	private static Kernel32 getKernel32() {
+		return Kernel32.INSTANCE;
+	}
 
 	@SneakyThrows
 	public Application getOpenedApplicationNames() {
@@ -64,16 +71,6 @@ public class Processes {
 		String title = nameAndTitle.get(1);
 
 		return new Application(name, title);
-	}
-
-	private static final int BUFFER_SIZE = 1024;
-
-	private static User32 getUser32() {
-		return User32.INSTANCE;
-	}
-
-	private static Kernel32 getKernel32() {
-		return Kernel32.INSTANCE;
 	}
 
 	public Application getWindowsActiveWindowInfo() {
