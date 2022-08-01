@@ -1,6 +1,5 @@
 import com.sun.jna.Native;
 import com.sun.jna.platform.win32.Kernel32;
-import com.sun.jna.platform.win32.Psapi;
 import com.sun.jna.platform.win32.User32;
 import com.sun.jna.ptr.IntByReference;
 import lombok.SneakyThrows;
@@ -11,11 +10,14 @@ import javax.script.ScriptException;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.List;
 import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static com.sun.jna.platform.win32.WinDef.HWND;
-import static com.sun.jna.platform.win32.WinNT.*;
 import static java.lang.String.format;
+import static java.util.stream.Collectors.*;
 
 public class Processes {
 
@@ -58,9 +60,9 @@ public class Processes {
 
 	private Application linuxRunningProcesses() throws IOException {
 		String xid = getXid();
-		String name = getApplicationName(xid);
-		String title = getApplicationTitle(xid);
-		getAppIcon(xid);
+		List<String> nameAndTitle = getApplicationNameAndTitle(xid, line -> line.split(" = ")[1]);
+		String name = nameAndTitle.get(0);
+		String title = nameAndTitle.get(1);
 
 		return new Application(xid, name, title);
 	}
@@ -106,23 +108,13 @@ public class Processes {
 				.split(" ")[4];
 	}
 
-	private String getApplicationName(String xid) throws IOException {
-		return getBufferedReader(format("xprop -id %s WM_CLASS", xid))
-				.readLine()
-				.split(" = ")[1]
-				.split(",")[1];
-	}
-
-	private String getApplicationTitle(String xid) throws IOException {
-		return getBufferedReader(format("xprop -id %s _NET_WM_NAME", xid))
-				.readLine()
-				.split(" = ")[1];
-	}
-
-	private void getAppIcon(String xid) throws IOException {
-		getBufferedReader("xprop -id $(xprop -root | awk '/_NET_ACTIVE_WINDOW\\(WINDOW\\)/{print $NF}') | awk '/_NET_WM_PID\\(CARDINAL\\)/{print $NF}'")
+	private List<String> getApplicationNameAndTitle(String xid, final Function<String, String> function) throws IOException {
+		Function<String, String> defaultFunction = line1 -> line1.replaceAll("\"", "");
+		return getBufferedReader(format("xprop -id %s _NET_WM_NAME WM_CLASS", xid))
 				.lines()
-				.forEach(System.out::println);
+				.map(function)
+				.map(defaultFunction)
+				.collect(toList());
 	}
 
 	private BufferedReader getBufferedReader(String command) throws IOException {
