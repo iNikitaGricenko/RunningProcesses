@@ -1,20 +1,18 @@
 import com.sun.jna.Native;
-import com.sun.jna.Pointer;
-import com.sun.jna.platform.win32.*;
+import com.sun.jna.platform.win32.Kernel32;
+import com.sun.jna.platform.win32.Psapi;
+import com.sun.jna.platform.win32.User32;
 import com.sun.jna.ptr.IntByReference;
-import com.sun.jna.ptr.PointerByReference;
 import lombok.SneakyThrows;
 
 import javax.script.ScriptEngine;
-import javax.script.ScriptEngineFactory;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
-import java.io.*;
-import java.util.List;
-import java.util.Optional;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 
-
-import static com.sun.jna.platform.win32.WinDef.*;
+import static com.sun.jna.platform.win32.WinDef.HWND;
 import static com.sun.jna.platform.win32.WinNT.*;
 import static java.lang.String.format;
 
@@ -22,13 +20,13 @@ public class Processes {
 
 	@SneakyThrows
 	public Application getOpenedApplicationNames() {
-		String systemOS = System.getProperty("os.name");
+		String systemOS = System.getProperty("os.name").toLowerCase();
 
-		if ("Linux".equals(systemOS)) {
+		if (systemOS.contains("linux")) {
 			return linuxRunningProcesses();
-		} else if ("Windows 10".equals(systemOS)) {
+		} else if (systemOS.contains("win")) {
 			return getWindowsActiveWindowInfo();
-		} else if ("Mac".equals(systemOS)) {
+		} else if (systemOS.contains("mac")) {
 			macOsRunningProcesses();
 		}
 
@@ -36,23 +34,19 @@ public class Processes {
 	}
 
 	private static void macOsRunningProcesses() throws ScriptException {
-		final String script="tell application \"System Events\"\n" +
-				"\tname of application processes whose frontmost is tru\n" +
-				"end";
-
-//		"global frontApp, frontAppName, windowTitle\n" +
-//		"\n" +
-//		"tell application \"System Events\"\n' +
-//		"\tset frontApp to first application process whose frontmost is true\n" +
-//		"\tset frontAppName to name of frontApp\n" +
-//		"\ttell process frontAppName\n" +
-//		"\t\ttell (1st window whose value of attribute \"AXMain\" is true)\n" +
-//		"\t\t\tset windowTitle to value of attribute \"AXTitle\"\n" +
-//		"\t\tend tell\n" +
-//		"\tend tell\n" +
-//		"end tell\n" +
-//		"\n" +
-// 		"return {frontAppName, windowTitle}"
+		final String script="global frontApp, frontAppName, windowTitle\n" +
+				"\n" +
+				"tell application \"System Events\"\n" +
+					"\tset frontApp to first application process whose frontmost is true\n" +
+					"\tset frontAppName to name of frontApp\n" +
+					"\ttell process frontAppName\n" +
+						"\t\ttell (1st window whose value of attribute \"AXMain\" is true)\n" +
+							"\t\t\tset windowTitle to value of attribute \"AXTitle\"\n" +
+						"\t\tend tell\n" +
+					"\tend tell\n" +
+				"end tell\n" +
+				"\n" +
+				"return {frontAppName, windowTitle}";
 
 		ScriptEngine appleScript = new ScriptEngineManager().getEngineByName("AppleScript");
 		String result=(String)appleScript.eval(script);
@@ -93,6 +87,7 @@ public class Processes {
 	private String getWindowsAppProcess() {
 		char[] bufferTwo = new char[1024 * 2];
 		IntByReference pointer = new IntByReference();
+//		User32.INSTANCE.GetWindowModuleFileName(User32.INSTANCE.GetForegroundWindow(), bufferTwo, 1024);
 		User32.INSTANCE.GetWindowThreadProcessId(User32.INSTANCE.GetForegroundWindow(), pointer);
 		HANDLE process = Kernel32.INSTANCE.OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, false, pointer.getValue());
 		Psapi.INSTANCE.GetModuleFileNameExW(process, null, bufferTwo, 1024);
@@ -119,7 +114,7 @@ public class Processes {
 	}
 
 	private void getAppIcon(String xid) throws IOException {
-		getBufferedReader("/bin/bash -c 'xprop -id $(xprop -root _NET_ACTIVE_WINDOW | cut -d ' ' -f 5) WM_NAME | cut -d '\"' -f 2'")
+		getBufferedReader("xprop -id $(xprop -root | awk '/_NET_ACTIVE_WINDOW\\(WINDOW\\)/{print $NF}') | awk '/_NET_WM_PID\\(CARDINAL\\)/{print $NF}'")
 				.lines()
 				.forEach(System.out::println);
 	}
