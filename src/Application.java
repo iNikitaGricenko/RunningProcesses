@@ -13,14 +13,13 @@ import static java.lang.String.format;
 @AllArgsConstructor
 public class Application {
 
-		private String xid;
 		private String name;
 		private String title;
 
 		@Override
 		public String toString() {
-				return format("Application {\nxid = %s,\nname = %s,\ntitle = %s\n}",
-						xid, name, title);
+				return format("Application {\nname = %s,\ntitle = %s\n}",
+						name, title);
 		}
 
 		@Override
@@ -32,13 +31,12 @@ public class Application {
 						return false;
 				}
 				Application that = (Application) o;
-				return getXid().equals(that.getXid())
-						&& Objects.equals(getName(), that.getName())
+				return Objects.equals(getName(), that.getName())
 						&& Objects.equals(getTitle(), that.getTitle());
 		}
 
 		@Override
 		public int hashCode() {
-				return Objects.hash(getXid(), getName(), getTitle());
+				return Objects.hash(getName(), getTitle());
 		}
 }
