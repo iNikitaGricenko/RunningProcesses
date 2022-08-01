@@ -59,12 +59,11 @@ public class Processes {
 	}
 
 	private Application linuxRunningProcesses() throws IOException {
-		String xid = getXid();
 		List<String> nameAndTitle = getApplicationNameAndTitle(line -> line.split(" = ")[1]);
 		String name = nameAndTitle.get(0);
 		String title = nameAndTitle.get(1);
 
-		return new Application(xid, name, title);
+		return new Application(name, title);
 	}
 
 	private static final int BUFFER_SIZE = 1024;
@@ -78,21 +77,13 @@ public class Processes {
 	}
 
 	public Application getWindowsActiveWindowInfo() {
-		String pid = getWindowsAppPid(); // returns 12032 (just pid)
-
 		String appProcess = executeWindCommand((buffer, hwnd) ->
 				getUser32().GetWindowThreadProcessId(hwnd, new IntByReference())); // returns app name in example C:\Program Files\JetBrains\IntelliJ IDEA Ultimate\bin\idea64.exe
 
 		String appTitle = executeWindCommand((buffer, hwnd) ->
 				getUser32().GetWindowModuleFileName(hwnd, buffer, BUFFER_SIZE)); // returns app title in example RunningProcesses – Processes.java
 
-		return new Application(pid, appProcess, appTitle);
-	}
-
-	private String getWindowsAppPid() {
-		HWND hwnd = getUser32().GetForegroundWindow();
-		int processId = getUser32().GetWindowThreadProcessId(hwnd, new IntByReference());
-		return String.valueOf(processId);
+		return new Application(appProcess, appTitle);
 	}
 
 	private String executeWindCommand(final BiFunction<char[], HWND, Integer> biFunction) {
@@ -100,12 +91,6 @@ public class Processes {
 		HWND hwnd = getUser32().GetForegroundWindow();
 		biFunction.apply(buffer, hwnd);
 		return Native.toString(buffer);
-	}
-
-	private String getXid() throws IOException {
-		return getBufferedReader("xprop -root _NET_ACTIVE_WINDOW")
-				.readLine()
-				.split(" ")[4];
 	}
 
 	private List<String> getApplicationNameAndTitle(final Function<String, String> function) throws IOException {
@@ -116,12 +101,6 @@ public class Processes {
 				.map(function)
 				.map(defaultFunction)
 				.collect(toList());
-	}
-
-	private BufferedReader getBufferedReader(String command) throws IOException {
-		Process process = Runtime.getRuntime().exec(command);
-		return new BufferedReader(
-				new InputStreamReader(process.getInputStream()));
 	}
 
 	private BufferedReader getBufferedReader(String[] command) throws IOException {
