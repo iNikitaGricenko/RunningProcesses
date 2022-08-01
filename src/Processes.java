@@ -11,12 +11,15 @@ import javax.script.ScriptException;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.function.BiFunction;
 
 import static com.sun.jna.platform.win32.WinDef.HWND;
 import static com.sun.jna.platform.win32.WinNT.*;
 import static java.lang.String.format;
 
 public class Processes {
+
+	private static final int SIZE = 1024;
 
 	@SneakyThrows
 	public Application getOpenedApplicationNames() {
@@ -37,13 +40,13 @@ public class Processes {
 		final String script="global frontApp, frontAppName, windowTitle\n" +
 				"\n" +
 				"tell application \"System Events\"\n" +
-					"\tset frontApp to first application process whose frontmost is true\n" +
-					"\tset frontAppName to name of frontApp\n" +
-					"\ttell process frontAppName\n" +
-						"\t\ttell (1st window whose value of attribute \"AXMain\" is true)\n" +
-							"\t\t\tset windowTitle to value of attribute \"AXTitle\"\n" +
-						"\t\tend tell\n" +
-					"\tend tell\n" +
+				"\tset frontApp to first application process whose frontmost is true\n" +
+				"\tset frontAppName to name of frontApp\n" +
+				"\ttell process frontAppName\n" +
+				"\t\ttell (1st window whose value of attribute \"AXMain\" is true)\n" +
+				"\t\t\tset windowTitle to value of attribute \"AXTitle\"\n" +
+				"\t\tend tell\n" +
+				"\tend tell\n" +
 				"end tell\n" +
 				"\n" +
 				"return {frontAppName, windowTitle}";
@@ -58,40 +61,43 @@ public class Processes {
 		String name = getApplicationName(xid);
 		String title = getApplicationTitle(xid);
 		getAppIcon(xid);
+
 		return new Application(xid, name, title);
 	}
 
-	private Application getWindowsActiveWindowInfo() throws IOException {
-		String pid = getWindowsAppPid(); // returns 12032 (just pid)
-		String appProcess = getWindowsAppProcess(); // returns app name in example C:\Program Files\JetBrains\IntelliJ IDEA Ultimate\bin\idea64.exe
-		String appTitle = getWindowsAppTitle(); // returns app title in example RunningProcesses – Processes.java
+	private static final int BUFFER_SIZE = 1024;
 
-//		throw new RuntimeException("get Running Processes on windows is currently unsupported");
+	private static User32 getUser32() {
+		return User32.INSTANCE;
+	}
+
+	private static Kernel32 getKernel32() {
+		return Kernel32.INSTANCE;
+	}
+
+	public Application getWindowsActiveWindowInfo() {
+		String pid = getWindowsAppPid(); // returns 12032 (just pid)
+
+		String appProcess = executeWindCommand((buffer, hwnd) ->
+				getUser32().GetWindowThreadProcessId(hwnd, new IntByReference())); // returns app name in example C:\Program Files\JetBrains\IntelliJ IDEA Ultimate\bin\idea64.exe
+
+		String appTitle = executeWindCommand((buffer, hwnd) ->
+				getUser32().GetWindowModuleFileName(hwnd, buffer, BUFFER_SIZE)); // returns app title in example RunningProcesses – Processes.java
+
 		return new Application(pid, appProcess, appTitle);
 	}
 
-	private String getWindowsAppPid() {
-		HWND hwnd = User32.INSTANCE.GetForegroundWindow();
-		int processId = User32.INSTANCE.GetWindowThreadProcessId(hwnd, new IntByReference());
+    private String getWindowsAppPid() {
+		HWND hwnd = getUser32().GetForegroundWindow();
+		int processId = getUser32().GetWindowThreadProcessId(hwnd, new IntByReference());
 		return String.valueOf(processId);
 	}
 
-	private String getWindowsAppTitle() {
-		HWND hwnd = User32.INSTANCE.GetForegroundWindow();
-		char[] buffer = new char[1024 * 2];
-		User32.INSTANCE.GetWindowText(User32.INSTANCE.GetForegroundWindow(), buffer, 1024);
-
+	private String executeWindCommand(final BiFunction<char[], HWND, Integer> biFunction) {
+		char[] buffer = new char[BUFFER_SIZE * 2];
+		HWND hwnd = getUser32().GetForegroundWindow();
+		biFunction.apply(buffer, hwnd);
 		return Native.toString(buffer);
-	}
-
-	private String getWindowsAppProcess() {
-		char[] bufferTwo = new char[1024 * 2];
-		IntByReference pointer = new IntByReference();
-//		User32.INSTANCE.GetWindowModuleFileName(User32.INSTANCE.GetForegroundWindow(), bufferTwo, 1024);
-		User32.INSTANCE.GetWindowThreadProcessId(User32.INSTANCE.GetForegroundWindow(), pointer);
-		HANDLE process = Kernel32.INSTANCE.OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, false, pointer.getValue());
-		Psapi.INSTANCE.GetModuleFileNameExW(process, null, bufferTwo, 1024);
-		return Native.toString(bufferTwo);
 	}
 
 	private String getXid() throws IOException {
