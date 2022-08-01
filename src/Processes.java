@@ -1,6 +1,8 @@
 import com.sun.jna.Native;
 import com.sun.jna.platform.win32.Kernel32;
+import com.sun.jna.platform.win32.Psapi;
 import com.sun.jna.platform.win32.User32;
+import com.sun.jna.platform.win32.WinNT;
 import com.sun.jna.ptr.IntByReference;
 import lombok.SneakyThrows;
 
@@ -15,6 +17,8 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import static com.sun.jna.platform.win32.WinDef.HWND;
+import static com.sun.jna.platform.win32.WinNT.PROCESS_QUERY_INFORMATION;
+import static com.sun.jna.platform.win32.WinNT.PROCESS_VM_READ;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 
@@ -74,13 +78,21 @@ public class Processes {
 	}
 
 	public Application getWindowsActiveWindowInfo() {
-		String appProcess = executeWindCommand((buffer, hwnd) ->
-				getUser32().GetWindowThreadProcessId(hwnd, new IntByReference())); // returns app name in example C:\Program Files\JetBrains\IntelliJ IDEA Ultimate\bin\idea64.exe
+		String appProcess = executeWindCommand((buffer, hwnd) -> {
+			WinNT.HANDLE handle = getKernelHandle();
+			return Psapi.INSTANCE.GetModuleFileNameExW(handle, null, buffer, BUFFER_SIZE);
+		}); // returns app name like path, in example C:\Program Files\JetBrains\IntelliJ IDEA Ultimate\bin\idea64.exe
 
 		String appTitle = executeWindCommand((buffer, hwnd) ->
-				getUser32().GetWindowModuleFileName(hwnd, buffer, BUFFER_SIZE)); // returns app title in example RunningProcesses – Processes.java
+				getUser32().GetWindowText(hwnd, buffer, BUFFER_SIZE)); // returns app title in example RunningProcesses – Processes.java
 
 		return new Application(appProcess, appTitle);
+	}
+
+	private WinNT.HANDLE getKernelHandle() {
+		IntByReference pointer = new IntByReference();
+		getUser32().GetWindowThreadProcessId(getUser32().GetForegroundWindow(), pointer);
+		return getKernel32().OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, false, pointer.getValue());
 	}
 
 	private String executeWindCommand(final BiFunction<char[], HWND, Integer> biFunction) {
