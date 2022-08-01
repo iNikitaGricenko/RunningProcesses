@@ -60,7 +60,7 @@ public class Processes {
 
 	private Application linuxRunningProcesses() throws IOException {
 		String xid = getXid();
-		List<String> nameAndTitle = getApplicationNameAndTitle(xid, line -> line.split(" = ")[1]);
+		List<String> nameAndTitle = getApplicationNameAndTitle(line -> line.split(" = ")[1]);
 		String name = nameAndTitle.get(0);
 		String title = nameAndTitle.get(1);
 
@@ -89,7 +89,7 @@ public class Processes {
 		return new Application(pid, appProcess, appTitle);
 	}
 
-    private String getWindowsAppPid() {
+	private String getWindowsAppPid() {
 		HWND hwnd = getUser32().GetForegroundWindow();
 		int processId = getUser32().GetWindowThreadProcessId(hwnd, new IntByReference());
 		return String.valueOf(processId);
@@ -108,9 +108,10 @@ public class Processes {
 				.split(" ")[4];
 	}
 
-	private List<String> getApplicationNameAndTitle(String xid, final Function<String, String> function) throws IOException {
+	private List<String> getApplicationNameAndTitle(final Function<String, String> function) throws IOException {
+		String[] command = {"/bin/bash", "-c", "xprop -id $(xprop -root _NET_ACTIVE_WINDOW | cut -d ' ' -f5) _NET_WM_NAME WM_CLASS"};
 		Function<String, String> defaultFunction = line1 -> line1.replaceAll("\"", "");
-		return getBufferedReader(format("xprop -id %s _NET_WM_NAME WM_CLASS", xid))
+		return getBufferedReader(command)
 				.lines()
 				.map(function)
 				.map(defaultFunction)
@@ -118,6 +119,12 @@ public class Processes {
 	}
 
 	private BufferedReader getBufferedReader(String command) throws IOException {
+		Process process = Runtime.getRuntime().exec(command);
+		return new BufferedReader(
+				new InputStreamReader(process.getInputStream()));
+	}
+
+	private BufferedReader getBufferedReader(String[] command) throws IOException {
 		Process process = Runtime.getRuntime().exec(command);
 		return new BufferedReader(
 				new InputStreamReader(process.getInputStream()));
