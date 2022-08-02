@@ -12,7 +12,9 @@ import javax.script.ScriptException;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -21,6 +23,7 @@ import static com.sun.jna.platform.win32.WinNT.PROCESS_QUERY_INFORMATION;
 import static com.sun.jna.platform.win32.WinNT.PROCESS_VM_READ;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 
 public class Processes {
 
@@ -32,6 +35,10 @@ public class Processes {
 
 	private static Kernel32 getKernel32() {
 		return Kernel32.INSTANCE;
+	}
+
+	private static Psapi getPsapi() {
+		return Psapi.INSTANCE;
 	}
 
 	@SneakyThrows
@@ -71,8 +78,8 @@ public class Processes {
 
 	private Application linuxRunningProcesses() throws IOException {
 		List<String> nameAndTitle = getApplicationNameAndTitle(line -> line.split(" = ")[1]);
-		String name = nameAndTitle.get(0);
-		String title = nameAndTitle.get(1);
+		String title = nameAndTitle.get(0);
+		String name = nameAndTitle.get(1);
 
 		return new Application(name, title);
 	}
@@ -80,7 +87,7 @@ public class Processes {
 	public Application getWindowsActiveWindowInfo() {
 		String appProcess = executeWindCommand((buffer, hwnd) -> {
 			WinNT.HANDLE handle = getKernelHandle();
-			return Psapi.INSTANCE.GetModuleFileNameExW(handle, null, buffer, BUFFER_SIZE);
+			return getPsapi().GetModuleFileNameExW(handle, null, buffer, BUFFER_SIZE);
 		}); // returns app name like path, in example C:\Program Files\JetBrains\IntelliJ IDEA Ultimate\bin\idea64.exe
 
 		String appTitle = executeWindCommand((buffer, hwnd) ->
